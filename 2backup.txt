@@ -1,0 +1,8 @@
+/etc/config/
+/etc/crontabs/
+/etc/init.d/
+/etc/modules.d/
+/etc/quagga/
+/etc/sysctl.conf
+/etc/lighttpd.conf
+/www/
