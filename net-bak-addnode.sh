@@ -2,6 +2,7 @@
 #
 # 2009/Sep/06 @ Zdenek Styblik
 #
+# adds node to the list, make directory $NODENAME and create config
 #
 # License? What?! Who would have use this crap anyway?! :)
 #

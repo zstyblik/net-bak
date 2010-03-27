@@ -20,18 +20,15 @@
 
 DATE=`date +%F`
 PREFIX=''
+VERSION='0.2'
 
-if [ ! -r "${PREFIX}nodes2backup" ]; then
-	echo "File 'nodes2backup' doesn't exist or couldn't be read."
-	echo "Terminating"
-	exit 1;
-fi
-
-for NODENAME in `cat ${PREFIX}nodes2backup | grep -v '^#'`; do
-  if [ ! -r ${PREFIX}${NODENAME}/.node ]; then
+backupnode() {
+	NODENAME=$1
+	if [ ! -r ${PREFIX}${NODENAME}/.node ]; then
+		echo "$NODENAME/.node not found"
 #   config not found
 #   echo it ?
-		continue;
+		return 10;
 	fi
 # import ip, etc.
   source ${PREFIX}${NODENAME}/.node
@@ -51,9 +48,49 @@ for NODENAME in `cat ${PREFIX}nodes2backup | grep -v '^#'`; do
 	fi
 # if node is still running 
 # WhiteRussian, then connect again and back it up too.
+	if [ -z $NODEWR ]; then
+		echo "var NODEWR is not set"
+		NODEWR="n"
+	fi;
 	if [ $NODEWR == 'y' ]; then
 #   I admit. Suffix here is a bit of unpredictable
 		ssh root@${NODEIP} /usr/sbin/nvram show > \
 		${PREFIX}${NODENAME}/${NODENAME}-${DATE}.nvram${SUFFIX}
 	fi;
-done
+}
+
+backupnodes() {
+	if [ ! -r "${PREFIX}nodes2backup" ]; then
+		echo "File 'nodes2backup' doesn't exist or couldn't be read."
+		echo "Terminating"
+		exit 1;
+	fi
+
+	for NODENAME in `cat ${PREFIX}nodes2backup | grep -v '^#'`; do
+		backupnode $NODENAME
+	done
+}
+
+help() {
+	echo "Net-bak v$VERSION";
+	echo "Usage: "
+	echo "-1 <node>	back-up specified [one] node"
+	echo "-a		back-up all nodes"
+	echo "-h		this help"
+	echo
+}
+
+case $1 in
+	-1)
+		backupnode $2
+		;;
+	-a)
+		backupnodes
+		;;
+	-h)
+		help
+		;;
+	*)
+		help
+		;;
+esac
