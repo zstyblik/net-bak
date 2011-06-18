@@ -1,0 +1,37 @@
+# README file for net-bak:
+
+net-bak is a very simple set of scripts for backing-up OpenWRT 
+devices over the network.
+
+
+## Requirements
+
+* ssh ~ at server
+* mailx ~ at server
+* tar ~ at OpenWRT node
+
+
+## How-to use it
+
+1.) run % net-bak.sh -n mynode; and answer questions
+2.) upload user's key, files2backup.txt, net-bak-node.sh at node
+3.) you may test configuration by either:
+  a) run % net-bak.sh -t; which is going to try to connect to node
+  b) run % net-bak.sh -1 mynode; which is going to try to backup given node
+4.) set-up cron for given user 
+
+
+## Directory structure:
+
+\
+|- files2backup.txt
+|- net-bak-node.sh
+|- net-bak.sh
+`- nodes2backup.txt
+
+* files2backup.txt ~ files to back-up from node
+* net-bak-node.sh ~ upload this script to node; executed via SSH
+* net-bak.sh ~ main script executed at server
+* nodes2backup.txt ~ list of names of nodes which corresponds with dir struct.
+
+
