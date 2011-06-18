@@ -202,11 +202,12 @@ backupnodes() {
 	fi
 	LOGFILEPART="./logs/backup-${DATE}.log"
 	COUNTER=0
-	while [ COUNTER -lt 100 ]; do
+	while [ $COUNTER -lt 100 ]; do
 		LOGFILE="${LOGFILEPART}.${COUNTER}"
 		if [ ! -e "${LOGFILE}" ]; then
 			break
 		fi
+		COUNTER=$(($COUNTER+1))
 	done
 	exec > "${LOGFILE}"
 	for NODENAME in $(cat "${PREFIX}${NODESFILE}" | grep -v -e '^#'); do
