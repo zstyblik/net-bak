@@ -23,76 +23,39 @@ DATE=$(date +%F)
 PREFIX='./'
 VERSION='0.3'
 NODESFILE="nodes2backup.txt"
-SSHOPTS=" -oPubkeyAuthentication=yes -oPasswordAuthentication=no"
-NOTIFY="root@localhost"
+SSHOPTS="-oPubkeyAuthentication=yes -oPasswordAuthentication=no"
+NOTIFY="root@turnovfree.net"
 
-# Desc: Adds node to back-up
-addnode() {
-	NODENAME=${1:-''}
-	if [ -z "${NODENAME}" ]; then
-		echo "[FAIL] No nodename given."
-		return 1
+# Desc: back-up all nodes
+backup_everything() {
+	if [ ! -r "${PREFIX}${NODESFILE}" ]; then
+		echo "[FAIL] File '${NODESFILE}' doesn't exist or couldn't be read."
+		exit 1;
 	fi
-
-	if ! $(printf "${NODENAME}" | \
-		grep -q -E -e '^[a-zA-Z]+[a-zA-Z0-9\_\.\-]+[a-zA-Z0-9]+$'); then
-		printf "[FAIL] Nodename '%s' is invalid."
-		return 1
+	if [ ! -d ./logs ]; then
+		mkdir logs
 	fi
-
-	if [ -d "${NODENAME}" ]; then
-		printf "[WARN] Directory '%s' already exists." "${NODENAME}"
-		while true; do
-			printf "Keep previous config and add node to nodelist only? [y/n]: "
-			read -n 1 ANSWER
-			if [ "${ANSWER}" = "y" ] || [ "${ANSWER}" = "n" ]; then
-				break
-			fi
-			printf "\n"
-		done
-		if [ "${ANSWER}" = "n" ]; then
-			if ! $(grep -q -e "${NODENAME}" "${NODESFILE}") ; then
-				printf "[INFO] Adding node '%s' to list of nodes.\n"
-				printf "%s\n" "${NODENAME}" >> "${NODESFILE}"
-			fi
-			return 0
-		fi
-	fi
-
-	printf "Node FQDN/IP address: "
-	read NODEIP
-
-	while true; do
-		printf "Is node running WhiteRussian? [y/n]: "
-		read -n 1 NODEWR
-		if [ "${NODEWR}" = "y" ] || [ "${NODEWR}" = "n" ]; then
+	LOGFILEPART="./logs/backup-${DATE}.log"
+	COUNTER=0
+	while [ $COUNTER -lt 1000 ]; do
+		LOGFILE="${LOGFILEPART}.${COUNTER}"
+		if [ ! -e "${LOGFILE}" ]; then
 			break
 		fi
-		printf "\n"
+		COUNTER=$(($COUNTER+1))
 	done
-
-
-	printf "Contact person in case of back-up failure.\n"
-	printf "Space separated list of e-mails.\n"
-	printf "Contact anybody? [e-mail]: "
-	read NODEADMIN
-
-	rm -rf "${NODENAME}"
-	mkdir "${NODENAME}"
-
-	if [ ! -e "${NODESFILE}" ]; then
-		cat /dev/null > "${NODESFILE}"
+	if [ -e "${LOGFILE}" ]; then
+		printf "[FAIL] Unable to create logfile."
+		exit 1
 	fi
-	if ! $(grep -q -e "${NODENAME}") ; then
-		printf "%s\n" "${NODENAME}" >> "${NODESFILE}"
-	fi
-	printf "NODEIP='%s'\n" "${NODEIP}" > "${NODENAME}/.node"
-	printf "NODEADMIN='%s'\n" "${NODEADMIN}" >> "${NODENAME}/.node"
-	printf "NODEWR='%s'\n" "${NODEWR}" >> "${NODENAME}/.node"
-	return 0
-} # addnode()
+	exec > "${LOGFILE}"
+	for NODENAME in $(cat "${PREFIX}${NODESFILE}" | grep -v -e '^#'); do
+		backupnode "${NODENAME}" || true
+	done
+	cat "${LOGFILE}" | mailx -s "Back-up status on ${DATE}" "${NOTIFY}"
+} # backup_everything()
 # Desc: back-up only one node
-backupnode() {
+backup_node() {
 	NODENAME=${1:-''}
 	if [ -z "${NODENAME}" ]; then
 		echo "[FAIL] parameter NODENAME is empty."
@@ -112,29 +75,21 @@ backupnode() {
 		return 1
 	fi
 	RC=0
-	ssh ${SSHOPTS} -l root "${NODEIP}" 'ls -la net-bak-node.sh' || RC=$?
-	case "${RC}" in
-		1)
-			printf "[INFO] Back-up scripts probably not present at '%s'\n" \
-				"${NODENAME}"
-			printf "[INFO] Trying to copy 'net-bak-node.sh' to '%s'.\n" \
-				"${NODENAME}"
-			scp net-bak-node.sh root@${NODENAME}:
-			printf "[INFO] Trying to copy 'files2backup.txt' to '%s'.\n" \
-				"${NODENAME}"
-			scp files2backup.txt root@${NODENAME}:
-			;;
-		255)
-			printf "[FAIL] Node '%s' seems to be unavailable!\n" "${NODENAME}"
-			return 1
-			;;
-		0)
-			;;
-		*)
-			printf "[FAIL] Unexpected RC, node '%s'\n" "${NODENAME}"
-			return 1
-			;;
-	esac
+	SSHOUT=$(ssh ${SSHOPTS} -l root "${NODEIP}" 'ls -la net-bak-node.sh' 2>&1 || true)
+	if $(printf "%s" "${SSHOUT}" | grep -q -e 'No route'); then
+		printf "[FAIL] Node '%s' seems to be unavailable!\n" "${NODENAME}"
+		return 1
+	fi
+	if $(printf "%s" "${SSHOUT}" | grep -q -e 'No such file'); then
+		printf "[INFO] Back-up scripts probably not present at '%s'\n" \
+			"${NODENAME}"
+		printf "[INFO] Trying to copy 'net-bak-node.sh' to '%s'.\n" \
+			"${NODENAME}"
+		scp net-bak-node.sh root@${NODEIP}:
+		printf "[INFO] Trying to copy 'files2backup.txt' to '%s'.\n" \
+			"${NODENAME}"
+		scp files2backup.txt root@${NODEIP}:
+	fi
 
 	BAKFILE=$(random_suffix "${PREFIX}${NODENAME}/${NODENAME}-${DATE}.tar.gz")
 	if [ -z "${BAKFILE}" ]; then
@@ -142,37 +97,20 @@ backupnode() {
 		return 2
 	fi
 	umask 0377
-	RC=0
-	while true; do
-		ssh ${SSHOPTS} -l root "${NODEIP}" \
-			'sh net-bak-node.sh' > "${BAKFILE}" || \
-			RC=$?
-		case "${RC}" in
-			0)
-				break
-				;;
-			100)
-				printf "[INFO] SCP-ing 'files2backup.txt' to node '%s'.\n" \
-					"${NODENAME}"
-				scp files2backup.txt root@${NODENAME}:
-				;;
-			255)
-				printf "[FAIL] Connection to node '%s' failed w/ RC '%i'\n" \
-					"${NODENAME}" "${RC}"
-				break
-				;;
-			*)
-				printf "[FAIL] Unexpected RC '%i' for node '%s'.\n" \
-					"${RC}" "${NODENAME}"
-				break
-				;;
-		esac
-	done
+	ssh ${SSHOPTS} -l root "${NODEIP}" \
+		'sh net-bak-node.sh' > "${BAKFILE}" || RC=$?
+	if [ ! -e "${BAKFILE}" ]; then
+		printf "[FAIL] Backup for node '%s' failed.\n" "${NODENAME}"
+	fi
 	if [ -e "${BAKFILE}" ] && [ ! -s "${BAKFILE}" ]; then
 		printf "[WARN] It's most likely back-up of node '%s' has failed.\n" \
 			"${NODENAME}"
 		printf "[WARN] Back-up file '%s' has zero length.\n" "${BAKFILE}"
 		printf "[WARN] Please, investigate.\n"
+	else
+		BAKSIZE=$(stat --printf=%s "${BAKFILE}")
+		printf "[PASS] Backup created for node '%s' of size %s bytes.\n" \
+			"${NODENAME}" "${BAKSIZE}"
 	fi
 	# Node is still running WhiteRussian -> back up NVRAM.
 	if [ "${NODEWR}" = 'y' ]; then
@@ -190,37 +128,14 @@ backupnode() {
 		fi
 	fi
 	return 0
-} # backupnode()
-# Desc: back-up all nodes
-backupnodes() {
-	if [ ! -r "${PREFIX}${NODESFILE}" ]; then
-		echo "[FAIL] File '${NODESFILE}' doesn't exist or couldn't be read."
-		exit 1;
-	fi
-	if [ ! -d ./logs ]; then
-		mkdir logs
-	fi
-	LOGFILEPART="./logs/backup-${DATE}.log"
-	COUNTER=0
-	while [ $COUNTER -lt 100 ]; do
-		LOGFILE="${LOGFILEPART}.${COUNTER}"
-		if [ ! -e "${LOGFILE}" ]; then
-			break
-		fi
-		COUNTER=$(($COUNTER+1))
-	done
-	exec > "${LOGFILE}"
-	for NODENAME in $(cat "${PREFIX}${NODESFILE}" | grep -v -e '^#'); do
-		backupnode "${NODENAME}"
-	done
-	cat "${LOGFILE}" | mailx -s "Back-up status on ${DATE}" "${NOTIFY}"
-} # backupnodes()
+} # backup_node()
 # Desc: removes node from list of nodes to back up
-deletenode() {
+delete_node() {
 	NODENAME=${1:-''}
 	while true; do
-		printf "Do not back-up node '%s' anymore? [y/n]: "
+		printf "Do not back-up node '%s' anymore? [y/n]: " "${NODENAME}"
 		read -n 1 ANSWER
+		printf "\n"
 		if [ "${ANSWER}" = "y" ] || [ "${ANSWER}" = "n" ]; then
 			break;
 		fi
@@ -232,7 +147,74 @@ deletenode() {
 	cp "${NODESFILE}" "${NODESFILE}.bak"
 	sed -e "s/${NODENAME}//g" "${NODESFILE}.bak" > "${NODESFILE}"
 	return 0
-} # deletenode()
+} # delete_node()
+# Desc: Adds node to back-up
+new_node() {
+	NODENAME=${1:-''}
+	if [ -z "${NODENAME}" ]; then
+		echo "[FAIL] No nodename given."
+		return 1
+	fi
+
+	if ! $(printf "${NODENAME}" | \
+		grep -q -E -e '^[a-zA-Z]+[a-zA-Z0-9\_\.\-]+[a-zA-Z0-9]+$'); then
+		printf "[FAIL] Nodename '%s' is invalid."
+		return 1
+	fi
+
+	if [ -d "${NODENAME}" ]; then
+		printf "[WARN] Directory '%s' already exists." "${NODENAME}"
+		while true; do
+			printf "Keep previous config and add node to nodelist only? [y/n]: "
+			read -n 1 ANSWER
+			printf "\n"
+			if [ "${ANSWER}" = "y" ] || [ "${ANSWER}" = "n" ]; then
+				break
+			fi
+		done
+		if [ "${ANSWER}" = "y" ]; then
+			if ! $(grep -q -e "${NODENAME}" "${NODESFILE}") ; then
+				printf "[INFO] Adding node '%s' to list of nodes.\n" "${NODENAME}"
+				printf "%s\n" "${NODENAME}" >> "${NODESFILE}"
+			else
+				printf "[INFO] Node '%s' already in list.\n" "${NODENAME}"
+			fi
+			return 0
+		fi
+	fi
+
+	printf "Node FQDN/IP address: "
+	read NODEIP
+
+	while true; do
+		printf "Is node running WhiteRussian? [y/n]: "
+		read -n 1 NODEWR
+		printf "\n"
+		if [ "${NODEWR}" = "y" ] || [ "${NODEWR}" = "n" ]; then
+			break
+		fi
+	done
+
+
+	printf "Contact person in case of back-up failure.\n"
+	printf "Space separated list of e-mails.\n"
+	printf "Contact anybody? [e-mail]: "
+	read NODEADMIN
+
+	rm -rf "${NODENAME}"
+	mkdir "${NODENAME}"
+
+	if [ ! -e "${NODESFILE}" ]; then
+		cat /dev/null > "${NODESFILE}"
+	fi
+	if ! $(grep -q -e "${NODENAME}" "${NODESFILE}") ; then
+		printf "%s\n" "${NODENAME}" >> "${NODESFILE}"
+	fi
+	printf "NODEIP='%s'\n" "${NODEIP}" > "${NODENAME}/.node"
+	printf "NODEADMIN='%s'\n" "${NODEADMIN}" >> "${NODENAME}/.node"
+	printf "NODEWR='%s'\n" "${NODEWR}" >> "${NODENAME}/.node"
+	return 0
+} # new_node()
 # Desc: generate unique back-up filename.
 # If file doesn't exist yet, return filename. Otherwise loop and randomize.
 random_suffix() {
@@ -258,8 +240,8 @@ show_help() {
 	printf "net-bak v%s\n" "${VERSION}"
 	printf "Usage: \n"
 	printf " -1 <node>\tback-up specified [one] node\n"
-	printf " -a\t\tback-up all nodes\n"
 	printf " -d <node>\tdo not backup node anymore\n"
+	printf " -e\t\tback-up all nodes\n"
 	printf " -h\t\tshows help\n"
 	printf " -n <node>\tadd new node to backup\n"
 	printf " -t\t\ttest connection to nodes\n"
@@ -295,13 +277,24 @@ test_nodes() {
 	done
 	return 0
 } # test_nodes()
-while getopts 1:ahn:t OPT; do
+
+### MAIN ###
+
+if [ $# -lt 1 ]; then
+	show_help
+	exit 1
+fi
+
+while getopts 1:d:ehn:t OPT; do
 	case "${OPT}" in
 		'1')
-			backupnode "${OPTARG}"
+			backup_node "${OPTARG}"
 			;;
-		'a')
-			backupnodes
+		'd')
+			delete_node "${OPTARG}"
+			;;
+		'e')
+			backup_everything
 			;;
 		'h')
 			show_help
@@ -317,7 +310,7 @@ while getopts 1:ahn:t OPT; do
 			show_help
 			exit 1
 			;;
-		*)
+		\*)
 			show_help
 			exit 1
 			;;
