@@ -1,5 +1,6 @@
 /etc/config/
 /etc/crontabs/
+/etc/dropbear/
 /etc/init.d/
 /etc/modules.d/
 /etc/quagga/
