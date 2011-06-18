@@ -51,9 +51,9 @@ addnode() {
 			printf "\n"
 		done
 		if [ "${ANSWER}" = "n" ]; then
-			if ! $(grep -q -e "${NODENAME}" "${NODESLIST}") ; then
+			if ! $(grep -q -e "${NODENAME}" "${NODESFILE}") ; then
 				printf "[INFO] Adding node '%s' to list of nodes.\n"
-				printf "%s\n" "${NODENAME}" >> "${NODESLIST}"
+				printf "%s\n" "${NODENAME}" >> "${NODESFILE}"
 			fi
 			return 0
 		fi
@@ -267,11 +267,21 @@ show_help() {
 } # show_help()
 # Desc: try to connect to nodes.
 test_nodes() {
-	if [ ! -e "${NODESLIST}" ]; then
-		printf "[FAIL] File '%s' doesn't exist." "${NODESLIST}"
+	if [ ! -e "${NODESFILE}" ]; then
+		printf "[FAIL] File '%s' doesn't exist." "${NODESFILE}"
 		return 1
 	fi
-	for NODENAME in $(cat "${NODESLIST}"); do
+	for NODENAME in $(cat "${NODESFILE}"); do
+		if [ ! -e "${PREFIX}${NODENAME}/.node" ]; then
+			printf "[FAIL] File '%s' doesn't exist.\n" "${PREFIX}${NODENAME}/.node"
+			continue
+		fi
+		. "${PREFIX}${NODENAME}/.node"
+		NODEIP=${NODEIP:-''}
+		if [ -z "${NODEIP}" ]; then
+			printf "[FAIL] NODEIP not set for node '%s'.\n" "${NODENAME}"
+			continue
+		fi
 		RC=0
 		ssh ${SSHOPTS} -l root "${NODENAME}" 'ls >/dev/null' || RC=$?
 		if [ ${RC} -eq 0 ]; then
