@@ -297,7 +297,7 @@ while getopts 1:ahn:t OPT; do
 			new_node "${OPTARG}"
 			;;
 		't')
-			testnodes
+			test_nodes
 			;;
 		\?)
 			echo "Unknown option."
