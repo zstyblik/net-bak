@@ -112,7 +112,7 @@ backupnode() {
 		return 1
 	fi
 	RC=0
-	ssh ${SSHOPTS} -l root "${NODENAME}" 'ls -la net-bak-node.sh' || RC=$?
+	ssh ${SSHOPTS} -l root "${NODEIP}" 'ls -la net-bak-node.sh' || RC=$?
 	case "${RC}" in
 		1)
 			printf "[INFO] Back-up scripts probably not present at '%s'\n" \
