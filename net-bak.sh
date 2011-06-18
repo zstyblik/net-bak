@@ -285,9 +285,11 @@ test_nodes() {
 		RC=0
 		ssh ${SSHOPTS} -l root "${NODENAME}" 'ls >/dev/null' || RC=$?
 		if [ ${RC} -eq 0 ]; then
-			printf "[PASS] ssh to node '%s' returned 0.\n"
+			printf "[PASS] ssh to node '%s', IP '%s' returned 0.\n" \
+				"${NODENAME}" "${NODEIP}"
 		else
-			printf "[FAIL] ssh to node '%s' returned '%i'.\n" "${NODENAME}" "${RC}"
+			printf "[FAIL] ssh to node '%s', IP '%s' returned '%i'.\n" \
+				"${NODENAME}" "${NODEIP}" "${RC}"
 		fi
 	done
 	return 0
