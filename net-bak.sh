@@ -283,7 +283,7 @@ test_nodes() {
 			continue
 		fi
 		RC=0
-		ssh ${SSHOPTS} -l root "${NODEIP}" 'ls >/dev/null' || RC=$?
+		ssh ${SSHOPTS} -l root "${NODEIP}" 'ls /etc/ >/dev/null' || RC=$?
 		if [ ${RC} -eq 0 ]; then
 			printf "[PASS] ssh to node '%s', IP '%s' returned 0.\n" \
 				"${NODENAME}" "${NODEIP}"
