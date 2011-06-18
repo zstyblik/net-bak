@@ -24,7 +24,7 @@ PREFIX='./'
 VERSION='0.3'
 NODESFILE="nodes2backup.txt"
 SSHOPTS="-oPubkeyAuthentication=yes -oPasswordAuthentication=no"
-NOTIFY="root@turnovfree.net"
+NOTIFY="root@localhost"
 
 # Desc: back-up all nodes
 backup_everything() {
