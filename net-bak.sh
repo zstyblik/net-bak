@@ -66,7 +66,7 @@ backup_node() {
 		return 1;
 	fi
 	#
-  . "${PREFIX}${NODENAME}/.node"
+	. "${PREFIX}${NODENAME}/.node"
 	NODEIP=${NODEIP:-''}
 	NODEADMIN=${NODEADMIN:-''}
 	NODEWR=${NODEWR:-'n'}
