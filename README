@@ -24,6 +24,11 @@ devices over the network.
 ## Directory structure:
 
 \
+|- mynode
+|  `- .node
+|- logs
+|  `- logfile-date.log
+|
 |- files2backup.txt
 |- net-bak-node.sh
 |- net-bak.sh
@@ -33,5 +38,19 @@ devices over the network.
 * net-bak-node.sh ~ upload this script to node; executed via SSH
 * net-bak.sh ~ main script executed at server
 * nodes2backup.txt ~ list of names of nodes which corresponds with dir struct.
+
+
+## .node file
+
+Structure:
+~~~ SNIP ~~~
+NODEIP='1.2.3.4'
+NODEWR='n'
+NODEADMIN='root@domain.tld'
+~~~ SNIP ~~~
+
+* NODEIP ~ IP address or FQDN of node
+* NODEWR ~ whether node is running OpenWRT White Russian or not
+* NODEADMIN ~ whom to contact in case of problems (unused)
 
 
