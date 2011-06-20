@@ -50,7 +50,7 @@ backup_everything() {
 	fi
 	exec > "${LOGFILE}"
 	for NODENAME in $(cat "${PREFIX}${NODESFILE}" | grep -v -e '^#'); do
-		backupnode "${NODENAME}" || true
+		backup_node "${NODENAME}" || true
 	done
 	cat "${LOGFILE}" | mailx -s "Back-up status on ${DATE}" "${NOTIFY}"
 } # backup_everything()
