@@ -20,7 +20,7 @@ set -e
 set -u
 
 DATE=$(date +%F)
-PREFIX='./'
+PREFIX="./"
 VERSION='0.3'
 NODESFILE="nodes2backup.txt"
 SSHOPTS="-oPubkeyAuthentication=yes -oPasswordAuthentication=no"
@@ -32,10 +32,10 @@ backup_everything() {
 		echo "[FAIL] File '${NODESFILE}' doesn't exist or couldn't be read."
 		exit 1;
 	fi
-	if [ ! -d ./logs ]; then
-		mkdir logs
+	if [ ! -d "${PREFIX}/logs" ]; then
+		mkdir "${PREFIX}/logs"
 	fi
-	LOGFILEPART="./logs/backup-${DATE}.log"
+	LOGFILEPART="${PREFIX}/logs/backup-${DATE}.log"
 	COUNTER=0
 	while [ $COUNTER -lt 1000 ]; do
 		LOGFILE="${LOGFILEPART}.${COUNTER}"
