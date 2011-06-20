@@ -20,7 +20,8 @@ set -e
 set -u
 
 DATE=$(date +%F)
-PREFIX="./"
+SCRIPTNAME="${0}"
+PREFIX="$(dirname "${SCRIPTNAME}")"
 VERSION='0.3'
 NODESFILE="nodes2backup.txt"
 SSHOPTS="-oPubkeyAuthentication=yes -oPasswordAuthentication=no"
@@ -28,7 +29,7 @@ NOTIFY="root@localhost"
 
 # Desc: back-up all nodes
 backup_everything() {
-	if [ ! -r "${PREFIX}${NODESFILE}" ]; then
+	if [ ! -r "${PREFIX}/${NODESFILE}" ]; then
 		echo "[FAIL] File '${NODESFILE}' doesn't exist or couldn't be read."
 		exit 1;
 	fi
@@ -49,7 +50,7 @@ backup_everything() {
 		exit 1
 	fi
 	exec > "${LOGFILE}"
-	for NODENAME in $(cat "${PREFIX}${NODESFILE}" | grep -v -e '^#'); do
+	for NODENAME in $(cat "${PREFIX}/${NODESFILE}" | grep -v -e '^#'); do
 		backup_node "${NODENAME}" || true
 	done
 	cat "${LOGFILE}" | mailx -s "Back-up status on ${DATE}" "${NOTIFY}"
@@ -61,12 +62,12 @@ backup_node() {
 		echo "[FAIL] parameter NODENAME is empty."
 		return 1
 	fi
-	if [ ! -r "${PREFIX}${NODENAME}/.node" ]; then
+	if [ ! -r "${PREFIX}/${NODENAME}/.node" ]; then
 		printf "[FAIL] File '%s/.node' not found\n" "${NODENAME}"
 		return 1;
 	fi
 	#
-	. "${PREFIX}${NODENAME}/.node"
+	. "${PREFIX}/${NODENAME}/.node"
 	NODEIP=${NODEIP:-''}
 	NODEADMIN=${NODEADMIN:-''}
 	NODEWR=${NODEWR:-'n'}
@@ -91,7 +92,7 @@ backup_node() {
 		scp files2backup.txt root@${NODEIP}:
 	fi
 
-	BAKFILE=$(random_suffix "${PREFIX}${NODENAME}/${NODENAME}-${DATE}.tar.gz")
+	BAKFILE=$(random_suffix "${PREFIX}/${NODENAME}/${NODENAME}-${DATE}.tar.gz")
 	if [ -z "${BAKFILE}" ]; then
 		echo "[FAIL] BAKFILE is empty. Randomization failed."
 		return 2
@@ -114,7 +115,7 @@ backup_node() {
 	fi
 	# Node is still running WhiteRussian -> back up NVRAM.
 	if [ "${NODEWR}" = 'y' ]; then
-		NVRAMFILE=$(random_suffix "${PREFIX}${NODENAME}/${NODENAME}-${DATE}.nvram")
+		NVRAMFILE=$(random_suffix "${PREFIX}/${NODENAME}/${NODENAME}-${DATE}.nvram")
 		if [ -z "${NVRAMFILE}" ]; then
 			echo "[FAIL] NVRAMFILE empty. Randomization failed."
 			return 2
@@ -255,11 +256,11 @@ test_nodes() {
 		return 1
 	fi
 	for NODENAME in $(cat "${NODESFILE}"); do
-		if [ ! -e "${PREFIX}${NODENAME}/.node" ]; then
-			printf "[FAIL] File '%s' doesn't exist.\n" "${PREFIX}${NODENAME}/.node"
+		if [ ! -e "${PREFIX}/${NODENAME}/.node" ]; then
+			printf "[FAIL] File '%s' doesn't exist.\n" "${PREFIX}/${NODENAME}/.node"
 			continue
 		fi
-		. "${PREFIX}${NODENAME}/.node"
+		. "${PREFIX}/${NODENAME}/.node"
 		NODEIP=${NODEIP:-''}
 		if [ -z "${NODEIP}" ]; then
 			printf "[FAIL] NODEIP not set for node '%s'.\n" "${NODENAME}"
