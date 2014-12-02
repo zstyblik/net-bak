@@ -1,8 +1,7 @@
 # README file for net-bak:
 
-net-bak is a very simple set of scripts for backing-up OpenWRT 
-devices over the network.
-
+net-bak is a set of very simple scripts for backing-up OpenWRT devices over
+the network.
 
 ## Requirements
 
@@ -13,16 +12,17 @@ devices over the network.
 
 ## How-to use it
 
-1.) run % net-bak.sh -n mynode; and answer questions
-2.) upload user's key, files2backup.txt, net-bak-node.sh at node
-3.) you may test configuration by either:
-  a) run % net-bak.sh -t; which is going to try to connect to node
-  b) run % net-bak.sh -1 mynode; which is going to try to backup given node
-4.) set-up cron for given user 
+1. run ``% net-bak.sh -n mynode;`` and answer questions
+2. upload user's key, files2backup.txt, net-bak-node.sh to node
+3. you may test configuration either by:
+  3. running ``% net-bak.sh -t;`` which is going to try to connect to node
+  3. running ``% net-bak.sh -1 mynode;`` which is going to try to backup given node
+4. set-up cron for given user
 
 
 ## Directory structure:
 
+```
 \
 |- mynode
 |  `- .node
@@ -33,6 +33,7 @@ devices over the network.
 |- net-bak-node.sh
 |- net-bak.sh
 `- nodes2backup.txt
+```
 
 * files2backup.txt ~ files to back-up from node
 * net-bak-node.sh ~ upload this script to node; executed via SSH
@@ -43,14 +44,12 @@ devices over the network.
 ## .node file
 
 Structure:
-~~~ SNIP ~~~
+```shell
 NODEIP='1.2.3.4'
 NODEWR='n'
 NODEADMIN='root@domain.tld'
-~~~ SNIP ~~~
+```
 
-* NODEIP ~ IP address or FQDN of node
+* NODEIP ~ IP address or FQDN of the node
 * NODEWR ~ whether node is running OpenWRT White Russian or not
 * NODEADMIN ~ whom to contact in case of problems (unused)
-
-
